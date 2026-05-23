@@ -345,7 +345,6 @@ const collectionConfigs: CollectionConfig[] = [
     },
     fallbackFields: [
       { name: 'name', label: 'Name', type: 'text', required: true },
-      { name: 'designation', label: 'Designation', type: 'text', required: true },
       { name: 'bio', label: 'Bio', type: 'textarea', rows: 4, colSpan: 2 },
       { name: 'image', label: 'Image', type: 'file', accept: 'image/*', colSpan: 2 },
       { name: 'linkedin_link', label: 'LinkedIn Link', type: 'text', placeholder: '/catalog?cat=contact' },

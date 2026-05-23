@@ -79,6 +79,7 @@ type CollectionConfig = {
   description: string;
   entityLabel: string;
   addLabel: string;
+  excludedFieldNames?: string[];
   emptyState: {
     title: string;
     description: string;
@@ -293,6 +294,7 @@ const collectionConfigs: CollectionConfig[] = [
     description: 'Manage the office information cards, links, lines, status, and ordering.',
     entityLabel: 'Office Info Card',
     addLabel: 'Add Office Info Card',
+    excludedFieldNames: ['link_label', 'link_url'],
     emptyState: {
       title: 'No office info cards yet',
       description: 'Add office information cards for location, visiting hours, and contact details.',
@@ -301,8 +303,6 @@ const collectionConfigs: CollectionConfig[] = [
       { name: 'title', label: 'Title', type: 'text', required: true },
       { name: 'description', label: 'Description', type: 'textarea', rows: 4, colSpan: 2 },
       { name: 'icon', label: 'Icon Slug', type: 'text', placeholder: 'map-pin' },
-      { name: 'link_label', label: 'Link Label', type: 'text' },
-      { name: 'link_url', label: 'Link URL', type: 'text', placeholder: 'https://maps.google.com' },
       { name: 'lines', label: 'Lines', type: 'arrayText', itemLabel: 'Line', addLabel: 'Add Line', colSpan: 2 },
       { name: 'display_order', label: 'Display Order', type: 'number', required: true, defaultValue: 1 },
       { name: 'is_active', label: 'Is Active', type: 'switch', defaultValue: true },
@@ -447,11 +447,16 @@ const getFieldDescription = (key: string, type: FieldConfig['type']) => {
   return undefined;
 };
 
-const buildDynamicFields = (fallbackFields: FieldConfig[], source: Record<string, unknown>) => {
-  const sourceKeys = Object.keys(source).filter((key) => !hiddenKeys.has(key));
+const buildDynamicFields = (
+  fallbackFields: FieldConfig[],
+  source: Record<string, unknown>,
+  excludedFieldNames: string[] = [],
+) => {
+  const excludedKeys = new Set(excludedFieldNames);
+  const sourceKeys = Object.keys(source).filter((key) => !hiddenKeys.has(key) && !excludedKeys.has(key));
   const fallbackMap = new Map(fallbackFields.map((field) => [field.name, field]));
   const orderedKeys = [
-    ...fallbackFields.map((field) => field.name),
+    ...fallbackFields.map((field) => field.name).filter((key) => !excludedKeys.has(key)),
     ...sourceKeys.filter((key) => {
       if (fallbackMap.has(key)) {
         return false;
@@ -561,6 +566,23 @@ const sanitizePayload = (fields: FieldConfig[], values: Record<string, unknown>)
     accumulator[field.name] = value === null || value === undefined ? '' : String(value).trim();
     return accumulator;
   }, {});
+
+const buildCollectionPayload = (
+  config: CollectionConfig,
+  fields: FieldConfig[],
+  values: Record<string, unknown>,
+  item?: ContactPageCollectionItem,
+) => {
+  const payload = sanitizePayload(fields, values);
+
+  config.excludedFieldNames?.forEach((fieldName) => {
+    const preservedValue = item?.[fieldName];
+    payload[fieldName] =
+      preservedValue === null || preservedValue === undefined ? '' : String(preservedValue);
+  });
+
+  return payload;
+};
 
 export const ContactPageCmsPage = () => {
   const { showToast } = useToast();
@@ -694,7 +716,11 @@ export const ContactPageCmsPage = () => {
       {collectionConfigs.map((config) => {
         const items = collectionItems[config.key];
         const inferredSource = items[0] ?? {};
-        const fields = buildDynamicFields(config.fallbackFields, inferredSource).filter((field) => field.name !== 'id');
+        const fields = buildDynamicFields(
+          config.fallbackFields,
+          inferredSource,
+          config.excludedFieldNames,
+        ).filter((field) => field.name !== 'id');
         const defaultValues = createDefaultValuesFromFields(fields);
         const schema = createSchemaFromFields(fields);
         const actions = collectionActions[config.key];
@@ -715,7 +741,7 @@ export const ContactPageCmsPage = () => {
             onCreate={(values) =>
               void mutateCollection(
                 savingKey,
-                () => actions.create(sanitizePayload(fields, values)),
+                () => actions.create(buildCollectionPayload(config, fields, values)),
                 `${config.entityLabel} created`,
                 `${config.entityLabel} was added successfully.`,
                 `Unable to create ${config.entityLabel.toLowerCase()}`,
@@ -770,7 +796,7 @@ export const ContactPageCmsPage = () => {
             onUpdate={(item, values) =>
               void mutateCollection(
                 savingKey,
-                () => actions.update(item.id, sanitizePayload(fields, values)),
+                () => actions.update(item.id, buildCollectionPayload(config, fields, values, item)),
                 `${config.entityLabel} updated`,
                 `${config.entityLabel} changes were saved successfully.`,
                 `Unable to update ${config.entityLabel.toLowerCase()}`,

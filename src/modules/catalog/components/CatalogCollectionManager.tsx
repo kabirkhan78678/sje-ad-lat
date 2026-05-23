@@ -11,6 +11,7 @@ import { LoadingOverlay } from '@/components/shared/LoadingOverlay';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
+import { API_BASE_URL } from '@/constants/api';
 import { ProjectsCmsSection } from '@/modules/catalog/components/ProjectsCmsSection';
 import type { FieldConfig } from '@/types/resources';
 
@@ -46,24 +47,83 @@ type CatalogCollectionManagerProps<TFormValues extends Record<string, unknown>, 
 const sortItems = <TItem extends CatalogCollectionItem>(items: TItem[]) =>
   [...items].sort((left, right) => left.display_order - right.display_order || left.id - right.id);
 
+const resolveMediaUrl = (value: unknown): string | null => {
+  if (!value || value instanceof File) {
+    return null;
+  }
+
+  if (typeof value === 'string') {
+    if (/^https?:\/\//i.test(value) || value.startsWith('blob:') || value.startsWith('data:')) {
+      return value;
+    }
+
+    return value.startsWith('/') ? `${API_BASE_URL}${value}` : `${API_BASE_URL}/${value}`;
+  }
+
+  if (typeof value === 'object') {
+    const mediaObject = value as Record<string, unknown>;
+    const candidate =
+      mediaObject.url ?? mediaObject.src ?? mediaObject.path ?? mediaObject.location ?? mediaObject.secure_url;
+
+    return typeof candidate === 'string' ? resolveMediaUrl(candidate) : null;
+  }
+
+  return null;
+};
+
+const isImageUrl = (url: string) => /\.(png|jpe?g|webp|gif|svg|avif)(\?.*)?$/i.test(url);
+
+const getPreviewFieldValue = (item: CatalogCollectionItem, field: FieldConfig) => {
+  const directValue = item[field.name];
+
+  if (directValue !== undefined && directValue !== null && directValue !== '') {
+    return directValue;
+  }
+
+  if (field.type !== 'file') {
+    return directValue;
+  }
+
+  const alternateKeys = [
+    `${field.name}_url`,
+    `${field.name}_path`,
+    `${field.name}_src`,
+    `${field.name}_file`,
+  ];
+
+  for (const key of alternateKeys) {
+    const nextValue = item[key];
+    if (nextValue !== undefined && nextValue !== null && nextValue !== '') {
+      return nextValue;
+    }
+  }
+
+  return directValue;
+};
+
 const renderPreviewValue = (value: unknown, field: FieldConfig) => {
   if (field.type === 'switch') {
     return <Badge tone={Boolean(value) ? 'success' : 'neutral'}>{Boolean(value) ? 'Active' : 'Inactive'}</Badge>;
   }
 
   if (field.type === 'file') {
-    const source =
-      typeof value === 'string'
-        ? value
-        : value && typeof value === 'object'
-          ? String((value as Record<string, unknown>).url ?? (value as Record<string, unknown>).path ?? '')
-          : '';
+    const source = resolveMediaUrl(value);
 
-    return source ? (
-      <span className="text-sm text-slate-500">Uploaded</span>
-    ) : (
-      <span className="text-sm text-slate-400">No media</span>
-    );
+    if (!source) {
+      return <span className="text-sm text-slate-400">No media</span>;
+    }
+
+    if (isImageUrl(source)) {
+      return (
+        <img
+          alt={`${field.label} preview`}
+          className="h-12 w-12 rounded-lg border border-slate-200 object-cover"
+          src={source}
+        />
+      );
+    }
+
+    return <span className="text-sm text-slate-500">Uploaded</span>;
   }
 
   if (Array.isArray(value)) {
@@ -163,7 +223,7 @@ export const CatalogCollectionManager = <
               ...previewFields.map((field) => ({
                 key: field.name,
                 label: field.label,
-                render: (item: TItem) => renderPreviewValue(item[field.name], field),
+                render: (item: TItem) => renderPreviewValue(getPreviewFieldValue(item, field), field),
               })),
               { key: 'display_order', label: 'Order' },
               {

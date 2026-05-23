@@ -50,6 +50,7 @@ import {
   createSuccessStoryState,
   createSuccessStoryStat,
   deleteSuccessStoryService,
+  getSuccessStories,
   deleteSuccessStoryState,
   deleteSuccessStoryStat,
   getSuccessStoryStates,
@@ -496,6 +497,20 @@ export const SuccessStoriesPage = () => {
     statModalDisclosure.close();
   };
 
+  const refreshServicesForState = async (stateId: number) => {
+    const response = await getSuccessStories();
+    const nextStates = sortStates(
+      (response.states ?? []).map((item) => normalizeState(item as Record<string, unknown>)),
+    );
+    const selectedState = nextStates.find((state) => state.id === stateId) ?? null;
+    const nextServices = sortServices(selectedState?.services ?? []);
+
+    setStates(nextStates);
+    setManagingState(selectedState);
+
+    return nextServices;
+  };
+
   const openServicesModal = (state: SuccessStoryState) => {
     setManagingState(state);
     setEditingService(null);
@@ -524,10 +539,10 @@ export const SuccessStoriesPage = () => {
     serviceForm.reset(nextValues);
   };
 
-  const resetServiceEditor = () => {
+  const resetServiceEditor = (nextDisplayOrder?: number) => {
     const nextValues = {
       ...defaultServiceValues,
-      display_order: (managingState?.services?.length ?? 0) + 1,
+      display_order: nextDisplayOrder ?? (managingState?.services?.length ?? 0) + 1,
     };
     setEditingService(null);
     serviceForm.reset(nextValues);
@@ -652,13 +667,8 @@ export const SuccessStoriesPage = () => {
         await createSuccessStoryService(managingState.id, payload);
       }
 
-      const statesResponse = await getSuccessStoryStates();
-      const nextStates = sortStates(
-        statesResponse.items.map((item) => normalizeState(item as Record<string, unknown>)),
-      );
-      setStates(nextStates);
-      setManagingState(nextStates.find((item) => item.id === managingState.id) ?? null);
-      resetServiceEditor();
+      const nextServices = await refreshServicesForState(managingState.id);
+      resetServiceEditor(nextServices.length + 1);
       showToast({
         title: editingService ? 'Service updated' : 'Service created',
         description: editingService
@@ -696,15 +706,12 @@ export const SuccessStoriesPage = () => {
       } else {
         setIsSavingService(true);
         await deleteSuccessStoryService(currentTarget.id);
-        const statesResponse = await getSuccessStoryStates();
-        const nextStates = sortStates(
-          statesResponse.items.map((item) => normalizeState(item as Record<string, unknown>)),
-        );
-        setStates(nextStates);
-        setManagingState(
-          managingState ? nextStates.find((item) => item.id === managingState.id) ?? null : null,
-        );
-        resetServiceEditor();
+        if (managingState) {
+          const nextServices = await refreshServicesForState(managingState.id);
+          resetServiceEditor(nextServices.length + 1);
+        } else {
+          resetServiceEditor();
+        }
       }
 
       deleteDisclosure.close();
@@ -1108,7 +1115,7 @@ export const SuccessStoriesPage = () => {
                 </p>
               </div>
               {editingService ? (
-                <Button onClick={resetServiceEditor} type="button" variant="outline">
+                <Button onClick={() => resetServiceEditor()} type="button" variant="outline">
                   Reset
                 </Button>
               ) : null}
@@ -1145,7 +1152,7 @@ export const SuccessStoriesPage = () => {
               </div>
 
               <div className="flex justify-end gap-3">
-                <Button onClick={resetServiceEditor} type="button" variant="ghost">
+                <Button onClick={() => resetServiceEditor()} type="button" variant="ghost">
                   Clear
                 </Button>
                 <Button isLoading={isSavingService} type="submit">
