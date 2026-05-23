@@ -10,8 +10,10 @@ import {
   Images,
   Info,
   LayoutDashboard,
+  Map,
   MessageSquareShare,
   Package,
+  Phone,
   ShieldCheck,
   Users,
   Waypoints,
@@ -36,10 +38,19 @@ export const navigationGroups = [
     items: [
       { label: 'Hero Section', icon: Images, path: ROUTES.content.home.hero },
       { label: 'Core Service Pillars', icon: BriefcaseBusiness, path: ROUTES.content.home.coreServicePillars },
+      { label: 'Nationwide Presence', icon: Map, path: ROUTES.content.home.nationwidePresence },
       { label: 'Stats', icon: ChartBar, path: ROUTES.content.home.stats },
       { label: 'Services', icon: BriefcaseBusiness, path: ROUTES.content.home.services },
       { label: 'Why Choose Us', icon: ShieldCheck, path: ROUTES.content.home.whyChooseUs },
       { label: 'Machinery', icon: Factory, path: ROUTES.content.home.machinery },
+      {
+        label: 'Machinery Portfolio',
+        icon: Wrench,
+        path: ROUTES.content.home.machineryPortfolio,
+      },
+      { label: 'Machine Gallery', icon: Images, path: ROUTES.content.home.machineGallery },
+      { label: 'Success Stories', icon: Map, path: ROUTES.content.home.successStories },
+      { label: 'Our Contribution', icon: Info, path: ROUTES.content.home.ourContribution },
       { label: 'Turnkey Steps', icon: Waypoints, path: ROUTES.content.home.turnkeySteps },
       {
         label: 'Production Configurations',
@@ -71,6 +82,12 @@ export const navigationGroups = [
     items: [
       { label: 'Categories', icon: FolderTree, path: ROUTES.catalog.categories },
       { label: 'Products', icon: Package, path: ROUTES.catalog.products },
+      { label: 'Laboratory Infrastructure', icon: FlaskConical, path: ROUTES.catalog.laboratoryInfrastructure },
+      { label: 'Certification & Compliance', icon: ShieldCheck, path: ROUTES.catalog.certificationCompliance },
+      { label: 'Industrial Machinery', icon: Factory, path: ROUTES.catalog.industrialMachinery },
+      { label: 'Projects', icon: FolderTree, path: ROUTES.catalog.projects },
+      { label: 'About Page', icon: Info, path: ROUTES.content.catalog.aboutPage },
+      { label: 'Contact Page', icon: Phone, path: ROUTES.content.catalog.contactPage },
     ],
   },
   {

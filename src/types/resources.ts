@@ -23,6 +23,15 @@ export type FieldType =
   | 'arrayObject'
   | 'keyValue';
 
+export type FieldUploadConfig = {
+  endpoint: string;
+  requestFieldName?: string;
+  accept?: string;
+  buttonLabel?: string;
+  helpText?: string;
+  responseKeys?: string[];
+};
+
 export type FieldSection = {
   title: string;
   description?: string;
@@ -47,6 +56,7 @@ export type FieldConfig = {
   itemLabel?: string;
   addLabel?: string;
   subfields?: FieldConfig[];
+  upload?: FieldUploadConfig;
   validation?: {
     email?: boolean;
     url?: boolean;

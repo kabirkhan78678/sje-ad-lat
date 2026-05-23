@@ -51,6 +51,8 @@ const resolveMediaUrl = (value: unknown): string | null => {
 };
 
 const isVideoUrl = (url: string) => /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i.test(url);
+const isImageUrl = (url: string) => /\.(png|jpe?g|webp|gif|svg|avif)(\?.*)?$/i.test(url);
+const isDocumentUrl = (url: string) => /\.(pdf|docx?|xlsx?|pptx?)(\?.*)?$/i.test(url);
 
 const FilePreview = ({ value }: { value: unknown }) => {
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
@@ -85,12 +87,23 @@ const FilePreview = ({ value }: { value: unknown }) => {
       <div className="p-3">
         {isVideoUrl(previewUrl) || (value instanceof File && value.type.startsWith('video/')) ? (
           <video className="max-h-64 w-full rounded-xl bg-slate-950" controls src={previewUrl} />
-        ) : (
+        ) : isImageUrl(previewUrl) || (value instanceof File && value.type.startsWith('image/')) ? (
           <img
             alt="Selected media preview"
             className="max-h-64 w-full rounded-xl object-cover"
             src={previewUrl}
           />
+        ) : isDocumentUrl(previewUrl) ? (
+          <a
+            className="inline-flex items-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-brand-700 transition hover:border-brand-300"
+            href={previewUrl}
+            rel="noreferrer"
+            target="_blank"
+          >
+            Open current file
+          </a>
+        ) : (
+          <p className="text-sm text-slate-500">Current file is saved, but preview is not available for this format.</p>
         )}
       </div>
     </div>
@@ -155,6 +168,8 @@ export const FormFieldRenderer = ({ field }: FormFieldRendererProps) => {
                 />
                 {controllerField.value instanceof File ? (
                   <p className="text-xs text-slate-500">Selected file: {controllerField.value.name}</p>
+                ) : typeof controllerField.value === 'string' && controllerField.value ? (
+                  <p className="text-xs text-slate-500">Current file is saved. Choose a new file only if you want to replace it.</p>
                 ) : null}
                 <FilePreview value={controllerField.value} />
               </div>
@@ -163,12 +178,14 @@ export const FormFieldRenderer = ({ field }: FormFieldRendererProps) => {
 
           if (field.type === 'textarea') {
             return (
-              <Textarea
-                {...controllerField}
-                placeholder={field.placeholder}
-                rows={field.rows ?? 4}
-                value={String(controllerField.value ?? '')}
-              />
+              <div className="space-y-3">
+                <Textarea
+                  {...controllerField}
+                  placeholder={field.placeholder}
+                  rows={field.rows ?? 4}
+                  value={String(controllerField.value ?? '')}
+                />
+              </div>
             );
           }
 

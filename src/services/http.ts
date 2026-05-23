@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 import { API_BASE_URL } from '@/constants/api';
-import { AUTH_ROUTES } from '@/constants/routes';
+import { AUTH_ROUTES, stripAdminBase, withAdminBase, ROUTES } from '@/constants/routes';
 import { authStorage } from '@/services/auth-storage';
 
 const emitUnauthorized = () => {
@@ -12,8 +12,10 @@ const emitUnauthorized = () => {
   authStorage.clearToken();
   window.dispatchEvent(new CustomEvent('auth:unauthorized'));
 
-  if (!AUTH_ROUTES.includes(window.location.pathname as (typeof AUTH_ROUTES)[number])) {
-    window.location.href = '/login';
+  const currentPath = stripAdminBase(window.location.pathname);
+
+  if (!AUTH_ROUTES.includes(currentPath as (typeof AUTH_ROUTES)[number])) {
+    window.location.href = withAdminBase(ROUTES.auth.login);
   }
 };
 
