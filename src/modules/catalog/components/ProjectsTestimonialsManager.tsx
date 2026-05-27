@@ -27,7 +27,14 @@ const fields: FieldConfig[] = [
   { name: 'client_role', label: 'Client Role', type: 'text', placeholder: 'Director, ABC Foods' },
   { name: 'initials', label: 'Initials', type: 'text', placeholder: 'AK' },
   { name: 'rating', label: 'Rating', type: 'number', required: true, min: 1, max: 5 },
-  { name: 'avatar_url', label: 'Avatar URL', type: 'text', placeholder: 'https://...' , colSpan: 2},
+  {
+    name: 'avatar',
+    label: 'Avatar Image',
+    type: 'file',
+    accept: 'image/png,image/jpeg,image/webp,image/avif,image/svg+xml',
+    description: 'Upload a client avatar. On edit, choose a new file only if you want to replace the current one.',
+    colSpan: 2,
+  },
   { name: 'quote', label: 'Quote', type: 'textarea', rows: 5, required: true, colSpan: 2 },
   { name: 'display_order', label: 'Display Order', type: 'number', required: true },
   { name: 'is_active', label: 'Active', type: 'switch' },
@@ -72,6 +79,7 @@ export const ProjectsTestimonialsManager = ({
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [uploadedPreviewUrl, setUploadedPreviewUrl] = useState<string | null>(null);
 
   const sortedItems = useMemo(
     () => [...items].sort((left, right) => left.display_order - right.display_order || left.id - right.id),
@@ -95,12 +103,27 @@ export const ProjectsTestimonialsManager = ({
   });
 
   const avatarUrl = form.watch('avatar_url');
+  const avatarValue = form.watch('avatar');
 
   useEffect(() => {
     if (!isModalOpen) {
       form.reset(projectTestimonialDefaultValues);
     }
   }, [form, isModalOpen]);
+
+  useEffect(() => {
+    if (!(avatarValue instanceof File)) {
+      setUploadedPreviewUrl(null);
+      return;
+    }
+
+    const nextObjectUrl = URL.createObjectURL(avatarValue);
+    setUploadedPreviewUrl(nextObjectUrl);
+
+    return () => {
+      URL.revokeObjectURL(nextObjectUrl);
+    };
+  }, [avatarValue]);
 
   const openCreate = () => {
     setActiveItem(null);
@@ -119,6 +142,7 @@ export const ProjectsTestimonialsManager = ({
       quote: item.quote,
       initials: item.initials,
       avatar_url: item.avatar_url,
+      avatar: item.avatar_url,
       rating: item.rating,
       display_order: item.display_order,
       is_active: item.is_active,
@@ -291,14 +315,20 @@ export const ProjectsTestimonialsManager = ({
                 Avatar Preview
               </div>
               <div className="p-4">
-                {avatarUrl ? (
+                {uploadedPreviewUrl ? (
+                  <img
+                    alt="Avatar preview"
+                    className="h-24 w-24 rounded-full object-cover"
+                    src={uploadedPreviewUrl}
+                  />
+                ) : avatarUrl ? (
                   <img
                     alt="Avatar preview"
                     className="h-24 w-24 rounded-full object-cover"
                     src={resolveAvatarUrl(avatarUrl)}
                   />
                 ) : (
-                  <p className="text-sm text-slate-500">Add an avatar URL to preview the client image.</p>
+                  <p className="text-sm text-slate-500">Upload an avatar image to preview the client photo.</p>
                 )}
               </div>
             </div>

@@ -40,7 +40,15 @@ const fields: FieldConfig[] = [
   { name: 'industry', label: 'Industry', type: 'text', required: true, placeholder: 'Food Processing' },
   { name: 'capacity', label: 'Capacity', type: 'text', required: true, placeholder: '120 TPD' },
   { name: 'details_link', label: 'Details Link', type: 'text', placeholder: '/catalog/projects/project-slug' },
-  { name: 'image_url', label: 'Image URL', type: 'text', required: true, colSpan: 2 },
+  {
+    name: 'image',
+    label: 'Project Image',
+    type: 'file',
+    required: true,
+    accept: 'image/png,image/jpeg,image/webp,image/avif,image/svg+xml',
+    description: 'Upload a featured project image. On edit, choose a new file only if you want to replace the current one.',
+    colSpan: 2,
+  },
   { name: 'display_order', label: 'Display Order', type: 'number', required: true },
   { name: 'is_active', label: 'Active', type: 'switch' },
 ];
@@ -101,6 +109,7 @@ export const FeaturedProjectsManager = ({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [expandedIds, setExpandedIds] = useState<Set<number>>(() => new Set());
+  const [uploadedPreviewUrl, setUploadedPreviewUrl] = useState<string | null>(null);
 
   const sortedItems = useMemo(
     () => [...items].sort((left, right) => left.display_order - right.display_order || left.id - right.id),
@@ -113,12 +122,27 @@ export const FeaturedProjectsManager = ({
   });
 
   const imageUrl = form.watch('image_url');
+  const imageValue = form.watch('image');
 
   useEffect(() => {
     if (!isModalOpen) {
       form.reset(featuredProjectDefaultValues);
     }
   }, [form, isModalOpen]);
+
+  useEffect(() => {
+    if (!(imageValue instanceof File)) {
+      setUploadedPreviewUrl(null);
+      return;
+    }
+
+    const nextObjectUrl = URL.createObjectURL(imageValue);
+    setUploadedPreviewUrl(nextObjectUrl);
+
+    return () => {
+      URL.revokeObjectURL(nextObjectUrl);
+    };
+  }, [imageValue]);
 
   const openCreate = () => {
     setActiveItem(null);
@@ -138,6 +162,7 @@ export const FeaturedProjectsManager = ({
       industry: item.industry,
       capacity: item.capacity,
       image_url: item.image_url,
+      image: item.image_url,
       details_link: item.details_link,
       display_order: item.display_order,
       is_active: item.is_active,
@@ -330,14 +355,20 @@ export const FeaturedProjectsManager = ({
                 Image Preview
               </div>
               <div className="p-4">
-                {imageUrl ? (
+                {uploadedPreviewUrl ? (
+                  <img
+                    alt="Featured project preview"
+                    className="max-h-72 w-full rounded-2xl object-cover"
+                    src={uploadedPreviewUrl}
+                  />
+                ) : imageUrl ? (
                   <img
                     alt="Featured project preview"
                     className="max-h-72 w-full rounded-2xl object-cover"
                     src={resolveImageUrl(imageUrl)}
                   />
                 ) : (
-                  <p className="text-sm text-slate-500">Add an image URL to preview the featured project artwork.</p>
+                  <p className="text-sm text-slate-500">Upload an image to preview the featured project artwork.</p>
                 )}
               </div>
             </div>

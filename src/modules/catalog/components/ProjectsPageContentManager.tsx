@@ -70,6 +70,8 @@ import {
   updateProjectsTestimonial,
   updateProjectsTestimonialsSection,
 } from '@/services/api/projectsPage';
+import { uploadAsset } from '@/services/api/uploads';
+import { API_ENDPOINTS } from '@/constants/api';
 import { getErrorMessage } from '@/utils/error';
 
 type SavingKey =
@@ -315,6 +317,59 @@ const mapReorderPayload = (items: Array<{ id: number; display_order: number }>) 
     display_order: index + 1,
   }));
 
+const resolveFeaturedProjectPayload = async (values: FeaturedProjectFormValues) => {
+  let imageUrl = values.image_url;
+
+  if (values.image instanceof File) {
+    const uploaded = await uploadAsset({
+      endpoint: API_ENDPOINTS.uploads.galleryImage,
+      file: values.image,
+      requestFieldName: 'image',
+    });
+    imageUrl = uploaded.url;
+  } else if (typeof values.image === 'string' && values.image.trim()) {
+    imageUrl = values.image.trim();
+  }
+
+  return {
+    title: values.title,
+    year: values.year,
+    location: values.location,
+    industry: values.industry,
+    capacity: values.capacity,
+    image_url: imageUrl,
+    details_link: values.details_link,
+    display_order: values.display_order,
+    is_active: values.is_active,
+  };
+};
+
+const resolveTestimonialPayload = async (values: ProjectTestimonialFormValues) => {
+  let avatarUrl = values.avatar_url;
+
+  if (values.avatar instanceof File) {
+    const uploaded = await uploadAsset({
+      endpoint: API_ENDPOINTS.uploads.galleryImage,
+      file: values.avatar,
+      requestFieldName: 'image',
+    });
+    avatarUrl = uploaded.url;
+  } else if (typeof values.avatar === 'string' && values.avatar.trim()) {
+    avatarUrl = values.avatar.trim();
+  }
+
+  return {
+    client_name: values.client_name,
+    client_role: values.client_role,
+    quote: values.quote,
+    initials: values.initials,
+    avatar_url: avatarUrl,
+    rating: values.rating,
+    display_order: values.display_order,
+    is_active: values.is_active,
+  };
+};
+
 export const ProjectsPageContentManager = () => {
   const { showToast } = useToast();
   const previewDisclosure = useDisclosure(false);
@@ -542,7 +597,7 @@ export const ProjectsPageContentManager = () => {
   const createProject = async (values: FeaturedProjectFormValues) => {
     setSavingState('featuredProjects', true);
     try {
-      await createFeaturedProject(values);
+      await createFeaturedProject(await resolveFeaturedProjectPayload(values));
       await reloadFeaturedProjects();
       showToast({ title: 'Featured project created', description: 'The project card was added successfully.', tone: 'success' });
     } catch (submitError) {
@@ -555,7 +610,7 @@ export const ProjectsPageContentManager = () => {
   const updateProject = async (item: FeaturedProject, values: FeaturedProjectFormValues) => {
     setSavingState('featuredProjects', true);
     try {
-      await updateFeaturedProject(item.id, values);
+      await updateFeaturedProject(item.id, await resolveFeaturedProjectPayload(values));
       await reloadFeaturedProjects();
       showToast({ title: 'Featured project updated', description: 'The project card was updated successfully.', tone: 'success' });
     } catch (submitError) {
@@ -711,7 +766,7 @@ export const ProjectsPageContentManager = () => {
   const createTestimonial = async (values: ProjectTestimonialFormValues) => {
     setSavingState('testimonials', true);
     try {
-      await createProjectsTestimonial(values);
+      await createProjectsTestimonial(await resolveTestimonialPayload(values));
       await reloadTestimonials();
       showToast({ title: 'Testimonial created', description: 'Client testimonial was added successfully.', tone: 'success' });
     } catch (submitError) {
@@ -724,7 +779,7 @@ export const ProjectsPageContentManager = () => {
   const updateTestimonial = async (item: ProjectTestimonial, values: ProjectTestimonialFormValues) => {
     setSavingState('testimonials', true);
     try {
-      await updateProjectsTestimonial(item.id, values);
+      await updateProjectsTestimonial(item.id, await resolveTestimonialPayload(values));
       await reloadTestimonials();
       showToast({ title: 'Testimonial updated', description: 'Client testimonial was updated successfully.', tone: 'success' });
     } catch (submitError) {

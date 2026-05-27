@@ -136,10 +136,23 @@ export const featuredProjectSchema = z.object({
   location: z.string().trim().min(1, 'Location is required.'),
   industry: z.string().trim().min(1, 'Industry is required.'),
   capacity: z.string().trim().min(1, 'Capacity is required.'),
-  image_url: z.string().trim().min(1, 'Image URL is required.'),
+  image_url: z.string().trim(),
+  image: z.union([z.instanceof(File), z.string(), z.null()]).optional(),
   details_link: linkFieldSchema,
   display_order: positiveOrderSchema,
   is_active: z.boolean().default(true),
+}).superRefine((value, context) => {
+  const hasStoredImage = value.image_url.trim().length > 0;
+  const hasUploadedImage =
+    value.image instanceof File || (typeof value.image === 'string' && value.image.trim().length > 0);
+
+  if (!hasStoredImage && !hasUploadedImage) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['image'],
+      message: 'Project image is required.',
+    });
+  }
 });
 
 export const featuredProjectDefaultValues: FeaturedProjectFormValues = {
@@ -149,6 +162,7 @@ export const featuredProjectDefaultValues: FeaturedProjectFormValues = {
   industry: '',
   capacity: '',
   image_url: '',
+  image: null,
   details_link: '',
   display_order: 1,
   is_active: true,
@@ -291,6 +305,7 @@ export const projectTestimonialSchema = z.object({
   quote: z.string().trim().min(1, 'Quote is required.'),
   initials: z.string().trim(),
   avatar_url: z.string().trim(),
+  avatar: z.union([z.instanceof(File), z.string(), z.null()]).optional(),
   rating: z.coerce.number().int().min(1, 'Rating must be at least 1.').max(5, 'Rating cannot exceed 5.'),
   display_order: positiveOrderSchema,
   is_active: z.boolean().default(true),
@@ -302,6 +317,7 @@ export const projectTestimonialDefaultValues: ProjectTestimonialFormValues = {
   quote: '',
   initials: '',
   avatar_url: '',
+  avatar: null,
   rating: 5,
   display_order: 1,
   is_active: true,

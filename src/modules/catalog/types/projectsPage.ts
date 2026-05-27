@@ -99,9 +99,13 @@ export type ProjectsPageContent = {
 export type ProjectsHeroFormValues = ProjectsHeroSection;
 export type ProjectsTopStatFormValues = Omit<ProjectsTopStat, 'id'>;
 export type ProjectsFeaturedSectionFormValues = ProjectsFeaturedSection;
-export type FeaturedProjectFormValues = Omit<FeaturedProject, 'id' | 'equipment'>;
+export type FeaturedProjectFormValues = Omit<FeaturedProject, 'id' | 'equipment'> & {
+  image: File | string | null;
+};
 export type FeaturedProjectEquipmentFormValues = Omit<FeaturedProjectEquipment, 'id'>;
 export type ProjectsCalculatorFormValues = ProjectsCalculatorSection;
 export type ProjectsTestimonialsSectionFormValues = ProjectsTestimonialsSection;
-export type ProjectTestimonialFormValues = Omit<ProjectTestimonial, 'id'>;
+export type ProjectTestimonialFormValues = Omit<ProjectTestimonial, 'id'> & {
+  avatar: File | string | null;
+};
 export type ProjectsCtaFormValues = ProjectsCtaSection;
