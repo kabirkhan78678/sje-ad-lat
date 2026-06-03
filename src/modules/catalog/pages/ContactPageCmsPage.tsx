@@ -1,5 +1,6 @@
 import { RefreshCw } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { z } from 'zod';
 
 import { ErrorState } from '@/components/shared/ErrorState';
 import { PageHeader } from '@/components/shared/PageHeader';
@@ -80,6 +81,7 @@ type CollectionConfig = {
   entityLabel: string;
   addLabel: string;
   excludedFieldNames?: string[];
+  omittedFieldNames?: string[];
   emptyState: {
     title: string;
     description: string;
@@ -229,9 +231,10 @@ const collectionConfigs: CollectionConfig[] = [
   {
     key: 'departments',
     title: 'Departments',
-    description: 'Manage department contact cards, including icon slugs, contact info, lines, and ordering.',
+    description: 'Manage department contact cards, including icon slugs, contact info, and ordering.',
     entityLabel: 'Department',
     addLabel: 'Add Department',
+    omittedFieldNames: ['lines'],
     emptyState: {
       title: 'No departments yet',
       description: 'Add department-specific contacts for the Contact page.',
@@ -500,6 +503,21 @@ const buildDynamicFields = (
   });
 };
 
+const stripFrontendValidation = (fields: FieldConfig[]) =>
+  fields.map((field) => ({
+    ...field,
+    required: false,
+    validation: undefined,
+  }));
+
+const createLooseSchemaFromFields = (fields: FieldConfig[]) =>
+  z.object(
+    fields.reduce<Record<string, z.ZodTypeAny>>((shape, field) => {
+      shape[field.name] = z.any().optional();
+      return shape;
+    }, {}),
+  );
+
 const buildSectionValues = (fields: FieldConfig[], section: ContactPageSectionRecord | null | undefined) => {
   const record = toRecord(section);
 
@@ -574,6 +592,10 @@ const buildCollectionPayload = (
   item?: ContactPageCollectionItem,
 ) => {
   const payload = sanitizePayload(fields, values);
+
+  config.omittedFieldNames?.forEach((fieldName) => {
+    delete payload[fieldName];
+  });
 
   config.excludedFieldNames?.forEach((fieldName) => {
     const preservedValue = item?.[fieldName];
@@ -719,10 +741,13 @@ export const ContactPageCmsPage = () => {
         const fields = buildDynamicFields(
           config.fallbackFields,
           inferredSource,
-          config.excludedFieldNames,
+          [...(config.excludedFieldNames ?? []), ...(config.omittedFieldNames ?? [])],
         ).filter((field) => field.name !== 'id');
-        const defaultValues = createDefaultValuesFromFields(fields);
-        const schema = createSchemaFromFields(fields);
+        const formFields = config.key === 'departments' ? stripFrontendValidation(fields) : fields;
+        const defaultValues = createDefaultValuesFromFields(formFields);
+        const schema = config.key === 'departments'
+          ? createLooseSchemaFromFields(formFields)
+          : createSchemaFromFields(formFields);
         const actions = collectionActions[config.key];
         const savingKey = `${config.key}-saving`;
 
@@ -733,7 +758,7 @@ export const ContactPageCmsPage = () => {
             description={config.description}
             emptyState={config.emptyState}
             entityLabel={config.entityLabel}
-            fields={fields}
+            fields={formFields}
             isLoading={isLoading}
             isSaving={Boolean(savingSections[savingKey])}
             items={items}
@@ -741,7 +766,7 @@ export const ContactPageCmsPage = () => {
             onCreate={(values) =>
               void mutateCollection(
                 savingKey,
-                () => actions.create(buildCollectionPayload(config, fields, values)),
+                () => actions.create(buildCollectionPayload(config, formFields, values)),
                 `${config.entityLabel} created`,
                 `${config.entityLabel} was added successfully.`,
                 `Unable to create ${config.entityLabel.toLowerCase()}`,
@@ -796,7 +821,7 @@ export const ContactPageCmsPage = () => {
             onUpdate={(item, values) =>
               void mutateCollection(
                 savingKey,
-                () => actions.update(item.id, buildCollectionPayload(config, fields, values, item)),
+                () => actions.update(item.id, buildCollectionPayload(config, formFields, values, item)),
                 `${config.entityLabel} updated`,
                 `${config.entityLabel} changes were saved successfully.`,
                 `Unable to update ${config.entityLabel.toLowerCase()}`,
