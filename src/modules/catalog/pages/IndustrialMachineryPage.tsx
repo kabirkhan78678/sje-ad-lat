@@ -152,6 +152,15 @@ const toNumber = (value: unknown, fallback = 0) => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
+const resolveMachineId = (item: Record<string, unknown>) =>
+  toNumber(
+    item.industrial_machinery_item_id ??
+      item.industrial_machinery_machine_id ??
+      item.machinery_id ??
+      item.machine_id ??
+      item.id,
+  );
+
 const normalizeFeature = (value: unknown): IndustrialMachineryFeature => {
   const item = toRecord(value);
 
@@ -185,7 +194,7 @@ const normalizeMachine = (value: unknown): IndustrialMachineryMachine => {
   const item = toRecord(value);
 
   return {
-    id: toNumber(item.id),
+    id: resolveMachineId(item),
     product_id:
       item.product_id === null || item.product_id === undefined || item.product_id === ''
         ? null
@@ -695,22 +704,35 @@ export const IndustrialMachineryPage = () => {
   };
 
   const removeMachine = async (item: IndustrialMachineryMachine) => {
+    if (!item.id) {
+      showToast({
+        title: 'Unable to delete machinery item',
+        description: 'This machinery item is missing a valid ID. Please refresh the page and try again.',
+        tone: 'error',
+      });
+      return false;
+    }
+
     setSaving('machines', true);
 
     try {
       await deleteIndustrialMachineryMachine(item.id);
-      await loadMachines();
+      setMachines((currentMachines) =>
+        currentMachines.filter((machine) => String(machine.id) !== String(item.id)),
+      );
       showToast({
         title: 'Machinery item deleted',
         description: `${item.title} was removed successfully.`,
         tone: 'success',
       });
+      return true;
     } catch (submitError) {
       showToast({
         title: 'Unable to delete machinery item',
         description: getErrorMessage(submitError),
         tone: 'error',
       });
+      return false;
     } finally {
       setSaving('machines', false);
     }
@@ -943,7 +965,7 @@ export const IndustrialMachineryPage = () => {
           isSaving={savingState.machines}
           items={machines}
           onCreate={(values) => void createMachine(values)}
-          onDelete={(item) => void removeMachine(item)}
+          onDelete={(item) => removeMachine(item)}
           onToggle={(item) => void toggleMachine(item)}
           onUpdate={(item, values) => void updateMachine(item, values)}
           products={products}

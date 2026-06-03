@@ -94,7 +94,7 @@ type IndustrialMachineryMachinesManagerProps = {
   isSaving: boolean;
   onCreate: (values: IndustrialMachineryMachineFormValues) => void;
   onUpdate: (item: IndustrialMachineryMachine, values: IndustrialMachineryMachineFormValues) => void;
-  onDelete: (item: IndustrialMachineryMachine) => void;
+  onDelete: (item: IndustrialMachineryMachine) => Promise<boolean | void> | boolean | void;
   onToggle: (item: IndustrialMachineryMachine) => void;
 };
 
@@ -221,6 +221,20 @@ export const IndustrialMachineryMachinesManager = ({
 
     onCreate(values);
   });
+
+  const confirmDelete = async () => {
+    if (!itemPendingDelete) {
+      return;
+    }
+
+    const wasDeleted = await onDelete(itemPendingDelete);
+    if (wasDeleted === false) {
+      return;
+    }
+
+    setIsDeleteOpen(false);
+    setItemPendingDelete(null);
+  };
 
   return (
     <>
@@ -477,9 +491,7 @@ export const IndustrialMachineryMachinesManager = ({
           setItemPendingDelete(null);
         }}
         onConfirm={() => {
-          if (itemPendingDelete) {
-            onDelete(itemPendingDelete);
-          }
+          void confirmDelete();
         }}
         open={isDeleteOpen}
         title="Delete machinery item?"
